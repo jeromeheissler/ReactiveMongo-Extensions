@@ -19,7 +19,7 @@ package reactivemongo.extensions.dao
 import scala.concurrent.{ Future, ExecutionContext }
 import scala.concurrent.duration.Duration
 
-import reactivemongo.api.{ DB, Collection, CollectionProducer }
+import reactivemongo.api.{ ReadPreference, DB, Collection, CollectionProducer }
 import reactivemongo.api.indexes.Index
 import reactivemongo.api.commands.{ GetLastError, WriteResult }
 
@@ -71,6 +71,14 @@ abstract class Dao[C <: Collection: CollectionProducer, Structure, Model, ID, Wr
    * Bulk inserts multiple models.
    *
    * @param models A [[scala.collection.TraversableOnce]] of models.
+   * @return The number of successful insertions.
+   */
+  def bulkInsert(models: TraversableOnce[Model])(implicit ec: ExecutionContext): Future[Int]
+
+  /**
+   * Bulk inserts multiple models.
+   *
+   * @param models A [[scala.collection.TraversableOnce]] of models.
    * @param bulkSize
    * @param bulkByteSize
    * @return The number of successful insertions.
@@ -94,9 +102,6 @@ abstract class Dao[C <: Collection: CollectionProducer, Structure, Model, ID, Wr
    */
   def defaultWriteConcern: GetLastError = GetLastError.Default
 
-  /** Drops this collection */
-  def drop()(implicit ec: ExecutionContext): Future[Unit]
-
   /**
    * Drops this collection and awaits until it has been dropped or a timeout has occured.
    * @param timeout Maximum amount of time to await until this collection has been dropped.
@@ -115,7 +120,7 @@ abstract class Dao[C <: Collection: CollectionProducer, Structure, Model, ID, Wr
    * @param page 1 based page number.
    * @param pageSize Maximum number of elements in each page.
    */
-  def find(selector: Structure, sort: Structure, page: Int, pageSize: Int)(implicit ec: ExecutionContext): Future[List[Model]]
+  def find(selector: Structure, sort: Structure, page: Int, pageSize: Int, readPreference: ReadPreference)(implicit ec: ExecutionContext): Future[List[Model]]
 
   /**
    * Retrieves all models matching the given selector.
@@ -123,33 +128,7 @@ abstract class Dao[C <: Collection: CollectionProducer, Structure, Model, ID, Wr
    * @param selector Selector document.
    * @param sort Sorting document.
    */
-  def findAll(selector: Structure, sort: Structure)(implicit ec: ExecutionContext): Future[List[Model]]
-
-  /**
-   * Updates and returns a single model. It returns the old document by default.
-   *
-   * @param query The selection criteria for the update.
-   * @param update Performs an update of the selected model.
-   * @param sort Determines which model the operation updates if the query selects multiple models.
-   *             findAndUpdate() updates the first model in the sort order specified by this argument.
-   * @param fetchNewObject When true, returns the updated model rather than the original.
-   * @param upsert When true, findAndUpdate() creates a new model if no model matches the query.
-   */
-  def findAndUpdate(
-    query: Structure,
-    update: Structure,
-    sort: Structure,
-    fetchNewObject: Boolean,
-    upsert: Boolean)(implicit ec: ExecutionContext): Future[Option[Model]]
-
-  /**
-   * Removes and returns a single model.
-   *
-   * @param query The selection criteria for the remove.
-   * @param sort Determines which model the operation removes if the query selects multiple models.
-   *             findAndRemove() removes the first model in the sort order specified by this argument.
-   */
-  def findAndRemove(query: Structure, sort: Structure)(implicit ec: ExecutionContext): Future[Option[Model]]
+  def findAll(selector: Structure, sort: Structure, readPreference: ReadPreference)(implicit ec: ExecutionContext): Future[List[Model]]
 
   /** Retrieves the model with the given `id`. */
   def findById(id: ID)(implicit ec: ExecutionContext): Future[Option[Model]]
@@ -176,7 +155,7 @@ abstract class Dao[C <: Collection: CollectionProducer, Structure, Model, ID, Wr
    * @param f Folding function.
    * @tparam A Type of fold result.
    */
-  def fold[A](selector: Structure, sort: Structure, state: A)(f: (A, Model) => A)(implicit ec: ExecutionContext): Future[A]
+  def fold[A](selector: Structure, sort: Structure, state: A, readPreference: ReadPreference)(f: (A, Model) => A)(implicit ec: ExecutionContext): Future[A]
 
   /**
    * Iterates over the documents matching the given selector and applies the function `f`.
@@ -185,7 +164,7 @@ abstract class Dao[C <: Collection: CollectionProducer, Structure, Model, ID, Wr
    * @param sort Sorting document.
    * @param f function to be applied.
    */
-  def foreach(selector: Structure, sort: Structure)(f: (Model) => Unit)(implicit ec: ExecutionContext): Future[Unit]
+  def foreach(selector: Structure, sort: Structure, readPreference: ReadPreference)(f: (Model) => Unit)(implicit ec: ExecutionContext): Future[Unit]
 
   /** Inserts the given model. */
   def insert(model: Model, writeConcern: GetLastError)(implicit ec: ExecutionContext): Future[WriteResult]
@@ -216,15 +195,6 @@ abstract class Dao[C <: Collection: CollectionProducer, Structure, Model, ID, Wr
 
   /** Removes the document with the given ID. */
   def removeById(id: ID, writeConcern: GetLastError)(implicit ec: ExecutionContext): Future[WriteResult]
-
-  /**
-   * Inserts the document, or updates it if it already exists in the collection.
-   *
-   * @param model The model to save.
-   * @param writeConcern the [[reactivemongo.core.commands.GetLastError]] command message to send in order to control
-   *                     how the document is inserted. Defaults to defaultWriteConcern.
-   */
-  def save(model: Model, writeConcern: GetLastError)(implicit ec: ExecutionContext): Future[WriteResult]
 
   /**
    * Updates the documents matching the given selector.

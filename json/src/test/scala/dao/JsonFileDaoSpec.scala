@@ -35,7 +35,7 @@ class JsonFileDaoSpec
     with BeforeAndAfter
     with OneInstancePerTest {
 
-  import play.modules.reactivemongo.json._
+  import reactivemongo.play.json._
 
   override implicit def patienceConfig = PatienceConfig(timeout = Span(20, Seconds), interval = Span(1, Seconds))
 

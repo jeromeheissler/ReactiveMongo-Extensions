@@ -58,54 +58,6 @@ class DummyBsonDaoSpec
     }
   }
 
-  it should "findAndUpdate one document and retreive the old document" in {
-    val dummyModel = DummyModel(name = "foo", surname = "bar", age = 32)
-
-    val futureResult = for {
-      insertResult <- dao.insert(dummyModel)
-      oldDocument <- ~dao.findAndUpdate("age" $eq dummyModel.age, $inc("age" -> 32))
-      newDocument <- ~dao.findOne("age" $eq 64)
-    } yield (oldDocument, newDocument)
-
-    whenReady(futureResult) {
-      case (oldDocument, newDocument) =>
-        oldDocument._id shouldBe dummyModel._id
-        oldDocument.age shouldBe dummyModel.age
-        newDocument.age shouldBe 64
-    }
-  }
-
-  it should "findAndUpdate one document and retreive the new document" in {
-    val dummyModel = DummyModel(name = "foo", surname = "bar", age = 32)
-
-    val futureResult = for {
-      insertResult <- dao.insert(dummyModel)
-      newDocument <- ~dao.findAndUpdate("age" $eq dummyModel.age, $inc("age" -> 32), fetchNewObject = true)
-    } yield newDocument
-
-    whenReady(futureResult) { newDocument =>
-      newDocument._id shouldBe dummyModel._id
-      newDocument.age shouldBe 64
-    }
-  }
-
-  it should "findAndRemove one document" in {
-    val dummyModel = DummyModel(name = "foo", surname = "bar", age = 32)
-
-    val futureResult = for {
-      insertResult <- dao.insert(dummyModel)
-      oldDocument <- ~dao.findAndRemove("age" $eq dummyModel.age)
-      afterCount <- dao.count()
-    } yield (oldDocument, afterCount)
-
-    whenReady(futureResult) {
-      case (oldDocument, afterCount) =>
-        oldDocument._id shouldBe dummyModel._id
-        oldDocument.age shouldBe dummyModel.age
-        afterCount shouldBe 0
-    }
-  }
-
   it should "find one random document in selected documents" in {
     val dummyModels = DummyModel.random(100)
 
@@ -310,30 +262,6 @@ class DummyBsonDaoSpec
       val updatedDummyModel = updatedMaybeDummyModel.get
       updatedDummyModel._id shouldBe dummyModel._id
       updatedDummyModel.age shouldBe 64
-    }
-  }
-
-  it should "save document" in {
-    val dummyModel = DummyModel(name = "foo", surname = "bar", age = 32)
-
-    val futureResult = for {
-      insert <- dao.save(dummyModel)
-      maybeInsertedDummyModel <- dao.findById(dummyModel._id)
-      update <- dao.save(dummyModel.copy(age = 64))
-      maybeUpdatedDummyModel <- dao.findById(dummyModel._id)
-    } yield (maybeInsertedDummyModel, maybeUpdatedDummyModel)
-
-    whenReady(futureResult) {
-      case (maybeInsertedDummyModel, maybeUpdatedDummyModel) =>
-        maybeInsertedDummyModel should be('defined)
-        val insertedDummyModel = maybeInsertedDummyModel.get
-        insertedDummyModel._id shouldBe dummyModel._id
-        insertedDummyModel.age shouldBe 32
-
-        maybeUpdatedDummyModel should be('defined)
-        val updatedDummyModel = maybeUpdatedDummyModel.get
-        updatedDummyModel._id shouldBe dummyModel._id
-        updatedDummyModel.age shouldBe 64
     }
   }
 

@@ -20,7 +20,7 @@ import reactivemongo.bson.BSONObjectID
 import reactivemongo.extensions.dao.LifeCycle
 import reactivemongo.extensions.util.Logger
 import play.api.libs.json.Json
-import play.modules.reactivemongo.json.BSONFormats._
+import reactivemongo.play.json.BSONFormats._
 import org.joda.time.DateTime
 
 case class TemporalModel(

@@ -82,7 +82,7 @@ abstract class FileDao[Id <% BSONValue: IdProducer, Structure](
     filename: String,
     contentType: String)(implicit readFileReader: BSONDocumentReader[BSONReadFile], ec: ExecutionContext): Future[BSONReadFile] =
     gfs.save(enumerator, DefaultFileToSave(
-      filename = filename, contentType = Some(contentType)))
+      filename = Some(filename), contentType = Some(contentType)))
 
 }
 

@@ -90,30 +90,4 @@ class MapModelBsonDaoSpec
     }
   }
 
-  it should "save document" in {
-    val mapModel = MapModel(data = Map("count" -> 1))
-
-    val futureResult = for {
-      insert <- dao.save(mapModel)
-      maybeInsertedDummyModel <- dao.findById(mapModel._id)
-      newData = mapModel.data + ("total" -> 2, "count" -> 2)
-      update <- dao.save(mapModel.copy(data = newData))
-      maybeUpdatedDummyModel <- dao.findById(mapModel._id)
-    } yield (maybeInsertedDummyModel, maybeUpdatedDummyModel)
-
-    whenReady(futureResult) {
-      case (maybeInsertedDummyModel, maybeUpdatedDummyModel) =>
-        maybeInsertedDummyModel should be('defined)
-        val insertedDummyModel = maybeInsertedDummyModel.get
-        insertedDummyModel._id shouldBe mapModel._id
-        insertedDummyModel.data("count") shouldBe 1
-
-        maybeUpdatedDummyModel should be('defined)
-        val updatedDummyModel = maybeUpdatedDummyModel.get
-        updatedDummyModel._id shouldBe mapModel._id
-        updatedDummyModel.data("count") shouldBe 2
-        updatedDummyModel.data("total") shouldBe 2
-    }
-  }
-
 }

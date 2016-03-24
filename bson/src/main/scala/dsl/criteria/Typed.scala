@@ -19,14 +19,13 @@ package reactivemongo.extensions.dsl.criteria
 
 import scala.language.dynamics
 import scala.language.experimental.macros
-import scala.reflect.macros.Context
+import scala.reflect.macros.whitebox
 import scala.reflect.runtime.universe._
 
 /**
  * The '''Typed''' `object` provides the ability to ''lift'' an arbitrary type
  * `T` into the [[reactivemongo.extensions.dsl.criteria]] world.  Each property
  * is represented as a [[reactivemongo.extensions.dsl.criteria.Term]].
- *
  *
  * @author svickers
  *
@@ -38,7 +37,7 @@ object Typed {
   }
 
   object PropertyAccess {
-    def select[T: c.WeakTypeTag](c: Context)(property: c.Expr[String]) = {
+    def select[T: c.WeakTypeTag](c: whitebox.Context)(property: c.Expr[String]) = {
       import c.universe._
       import c.universe.typeOf
       import c.mirror._
@@ -51,26 +50,26 @@ object Typed {
             ),
           st @ Literal(Constant(name: String))
           ) =>
-          val accessor = parentType.tpe.member(newTermName(name)) orElse {
+          val accessor = parentType.tpe.member(TermName(name)) orElse {
             c.abort(
               c.enclosingPosition,
               s"$name is not a member of ${parentType.tpe}"
-            );
+            )
           }
 
           Apply(
             Select(
               New(TypeTree(typeOf[Term[Any]])),
-              nme.CONSTRUCTOR
+              termNames.CONSTRUCTOR
             ),
             List(st)
           );
 
         case other =>
-          c.abort(c.enclosingPosition, s"only property access is supported: $other");
+          c.abort(c.enclosingPosition, s"only property access is supported: $other")
       }
 
-      c.Expr[Any](tree);
+      c.Expr[Any](tree)
     }
   }
 
@@ -78,6 +77,6 @@ object Typed {
    * The criteria method produces a type which enforces the existence of
    * property names within ''T''.
    */
-  def criteria[T] = new PropertyAccess[T];
+  def criteria[T] = new PropertyAccess[T]
 }
 

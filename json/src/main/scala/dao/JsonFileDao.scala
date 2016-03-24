@@ -32,14 +32,14 @@ import scala.concurrent.{ ExecutionContext, Future }
 abstract class JsonFileDao[Id <: JsValue: IdProducer](db: => DB with DBMetaCommands, collectionName: String)(implicit gridFsId: Id => BSONValue)
     extends FileDao[Id, JsObject](db, collectionName) {
 
-  import play.modules.reactivemongo.json.JsObjectWriter
+  import reactivemongo.play.json.JsObjectWriter
 
   def findById(id: Id)(implicit ec: ExecutionContext): ReadFileWrapper =
     findOne(Json.obj("_id" -> id))
 }
 
 object JsonFileDao {
-  import play.modules.reactivemongo.json.BSONFormats
+  import reactivemongo.play.json.BSONFormats
 
   // !! unsafe
   implicit def defaultGridFSBSONId[T <: JsValue](json: T): BSONValue =

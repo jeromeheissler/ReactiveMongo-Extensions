@@ -2,7 +2,7 @@
 
 ### Usage
 
-JsonDao operates on play.modules.reactivemongo.json.collection.JSONCollection.
+JsonDao operates on reactivemongo.play.json.collection.JSONCollection.
 If you are using Play-ReactiveMongo plugin you will need to use JsonDao.
 
 Below is a sample model.
@@ -24,7 +24,7 @@ Companion object should provide helper functions for the model like transformati
 
 ```scala
 import play.modules.reactivemongo.ReactiveMongoPlugin
-import play.modules.reactivemongo.json.BSONFormats._
+import reactivemongo.play.json.BSONFormats._
 
 object Person {
   implicit val personFormat = Json.format[Person]

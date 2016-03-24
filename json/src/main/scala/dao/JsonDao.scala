@@ -21,13 +21,15 @@ import scala.util.Random
 import scala.concurrent.{ Future, Await, ExecutionContext }
 
 import scala.concurrent.duration._
-import reactivemongo.bson._
-import reactivemongo.api.{ DB, QueryOpts }
+
+import reactivemongo.api.{ ReadPreference, DB, QueryOpts }
 import reactivemongo.api.indexes.Index
 import reactivemongo.api.commands.{ GetLastError, WriteResult }
-import play.modules.reactivemongo.json._, collection.JSONCollection
 import reactivemongo.extensions.dao.{ Dao, LifeCycle, ReflexiveLifeCycle }
 import reactivemongo.extensions.json.dsl.JsonDsl._
+
+import reactivemongo.play.iteratees.cursorProducer
+import reactivemongo.play.json._, collection.JSONCollection
 
 import play.api.libs.json.{
   Json,
@@ -39,7 +41,7 @@ import play.api.libs.json.{
   Reads,
   Writes
 }
-import play.api.libs.iteratee.{ Iteratee, Enumerator }
+import play.api.libs.iteratee.Iteratee
 
 /**
  * A DAO implementation that operates on JSONCollection using JsObject.
@@ -50,7 +52,7 @@ import play.api.libs.iteratee.{ Iteratee, Enumerator }
  * {{{
  * import reactivemongo.bson.BSONObjectID
  * import play.api.libs.json.Json
- * import play.modules.reactivemongo.json.BSONFormats._
+ * import reactivemongo.play.json.BSONFormats._
  *
  * case class Person(
  *   _id: BSONObjectID = BSONObjectID.generate,
@@ -69,7 +71,7 @@ import play.api.libs.iteratee.{ Iteratee, Enumerator }
  * {{{
  * import reactivemongo.api.{ MongoDriver, DB }
  * import reactivemongo.bson.BSONObjectID
- * import play.modules.reactivemongo.json.BSONFormats._
+ * import reactivemongo.play.json.BSONFormats._
  * import reactivemongo.extensions.json.dao.JsonDao
  * import scala.concurrent.ExecutionContext.Implicits.global
  *
@@ -117,37 +119,23 @@ abstract class JsonDao[Model: OFormat, ID: Writes](db: => DB, collectionName: St
     selector: JsObject = Json.obj(),
     sort: JsObject = Json.obj("_id" -> 1),
     page: Int,
-    pageSize: Int)(implicit ec: ExecutionContext): Future[List[Model]] = {
+    pageSize: Int,
+    readPreference: ReadPreference = ReadPreference.primary)(implicit ec: ExecutionContext): Future[List[Model]] = {
     val from = (page - 1) * pageSize
     collection
       .find(selector)
       .sort(sort)
       .options(QueryOpts(skipN = from, batchSizeN = pageSize))
-      .cursor[Model]
+      .cursor[Model](readPreference)
       .collect[List](pageSize)
   }
 
   def findAll(
     selector: JsObject = Json.obj(),
-    sort: JsObject = Json.obj("_id" -> 1))(implicit ec: ExecutionContext): Future[List[Model]] = {
-    collection.find(selector).sort(sort).cursor[Model].collect[List]()
+    sort: JsObject = Json.obj("_id" -> 1),
+    readPreference: ReadPreference = ReadPreference.primary)(implicit ec: ExecutionContext): Future[List[Model]] = {
+    collection.find(selector).sort(sort).cursor[Model](readPreference).collect[List]()
   }
-
-  @deprecated(since = "0.11.1",
-    message = "Directly use [[findAndUpdate]] collection operation")
-  def findAndUpdate(
-    query: JsObject,
-    update: JsObject,
-    sort: JsObject = Json.obj(),
-    fetchNewObject: Boolean = false,
-    upsert: Boolean = false)(implicit ec: ExecutionContext): Future[Option[Model]] = collection.findAndUpdate(
-    query, update, fetchNewObject, upsert).map(_.result[Model])
-
-  @deprecated(since = "0.11.1",
-    message = "Directly use [[findAndRemove]] collection operation")
-  def findAndRemove(query: JsObject, sort: JsObject = Json.obj())(implicit ec: ExecutionContext): Future[Option[Model]] = collection.findAndRemove(
-    query, if (sort == BSONDocument.empty) None else Some(sort)).
-    map(_.result[Model])
 
   def findRandom(selector: JsObject = Json.obj())(implicit ec: ExecutionContext): Future[Option[Model]] = for {
     count <- count(selector)
@@ -179,8 +167,8 @@ abstract class JsonDao[Model: OFormat, ID: Writes](db: => DB, collectionName: St
     }
 
     collection.bulkInsert(go(mappedDocuments.toTraversable),
-      true, defaultWriteConcern) map { result =>
-        mappedDocuments.map(lifeCycle.postPersist)
+      ordered = true, defaultWriteConcern) map { result =>
+        mappedDocuments.foreach(lifeCycle.postPersist)
         result.n
       }
   }
@@ -198,8 +186,8 @@ abstract class JsonDao[Model: OFormat, ID: Writes](db: => DB, collectionName: St
     }
 
     collection.bulkInsert(go(mappedDocuments.toTraversable),
-      true, defaultWriteConcern, bulkSize, bulkByteSize) map { result =>
-        mappedDocuments.map(lifeCycle.postPersist)
+      ordered = true, defaultWriteConcern, bulkSize, bulkByteSize) map { result =>
+        mappedDocuments.foreach(lifeCycle.postPersist)
         result.n
       }
   }
@@ -216,19 +204,11 @@ abstract class JsonDao[Model: OFormat, ID: Writes](db: => DB, collectionName: St
     update: U,
     writeConcern: GetLastError = defaultWriteConcern)(implicit ec: ExecutionContext): Future[WriteResult] = collection.update($id(id), update, writeConcern)
 
-  def save(model: Model, writeConcern: GetLastError = defaultWriteConcern)(implicit ec: ExecutionContext): Future[WriteResult] = {
-    val mappedModel = lifeCycle.prePersist(model)
-    collection.save(mappedModel, writeConcern) map { lastError =>
-      lifeCycle.postPersist(mappedModel)
-      lastError
-    }
-  }
-
   def count(selector: JsObject = Json.obj())(implicit ec: ExecutionContext): Future[Int] = collection.count(Some(selector))
 
-  def drop()(implicit ec: ExecutionContext): Future[Unit] = collection.drop()
-
-  def dropSync(timeout: Duration = 10 seconds)(implicit ec: ExecutionContext): Unit = Await.result(drop(), timeout)
+  def dropSync(timeout: Duration = 10 seconds)(implicit ec: ExecutionContext): Unit = Await.result({
+    collection.drop(failIfNotFound = true)
+  }, timeout)
 
   def removeById(id: ID, writeConcern: GetLastError = defaultWriteConcern)(implicit ec: ExecutionContext): Future[WriteResult] = {
     lifeCycle.preRemove(id)
@@ -251,9 +231,10 @@ abstract class JsonDao[Model: OFormat, ID: Writes](db: => DB, collectionName: St
 
   def foreach(
     selector: JsObject = Json.obj(),
-    sort: JsObject = Json.obj("_id" -> 1))(f: (Model) => Unit)(implicit ec: ExecutionContext): Future[Unit] = {
-    collection.find(selector).sort(sort).cursor[Model]
-      .enumerate()
+    sort: JsObject = Json.obj("_id" -> 1),
+    readPreference: ReadPreference = ReadPreference.primary)(f: (Model) => Unit)(implicit ec: ExecutionContext): Future[Unit] = {
+    cursorProducer.produce(collection.find(selector).sort(sort).cursor[Model](readPreference))
+      .enumerator()
       .apply(Iteratee.foreach(f))
       .flatMap(i => i.run)
   }
@@ -261,9 +242,10 @@ abstract class JsonDao[Model: OFormat, ID: Writes](db: => DB, collectionName: St
   def fold[A](
     selector: JsObject = Json.obj(),
     sort: JsObject = Json.obj("_id" -> 1),
-    state: A)(f: (A, Model) => A)(implicit ec: ExecutionContext): Future[A] = {
-    collection.find(selector).sort(sort).cursor[Model]
-      .enumerate()
+    state: A,
+    readPreference: ReadPreference = ReadPreference.primary)(f: (A, Model) => A)(implicit ec: ExecutionContext): Future[A] = {
+    cursorProducer.produce(collection.find(selector).sort(sort).cursor[Model](readPreference))
+      .enumerator()
       .apply(Iteratee.fold(state)(f))
       .flatMap(i => i.run)
   }

@@ -20,7 +20,7 @@ import org.scalatest._
 import reactivemongo.extensions.util.Logger
 import reactivemongo.bson._
 import play.api.libs.json._
-import play.modules.reactivemongo.json.BSONFormats._
+import reactivemongo.play.json.BSONFormats._
 import JsonDsl._
 import org.joda.time.DateTime
 

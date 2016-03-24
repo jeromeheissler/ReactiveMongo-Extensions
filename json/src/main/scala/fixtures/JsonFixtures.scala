@@ -17,12 +17,10 @@
 package reactivemongo.extensions.json.fixtures
 
 import scala.concurrent.{ Future, ExecutionContext }
-import reactivemongo.extensions.util.Logger
 import reactivemongo.extensions.fixtures.Fixtures
 import reactivemongo.api.DB
 import reactivemongo.api.commands.WriteResult
-import play.modules.reactivemongo.json._, collection.JSONCollection
-import play.api.libs.iteratee.Enumerator
+import reactivemongo.play.json._, collection.JSONCollection
 import play.api.libs.json.{ Json, JsObject }
 
 class JsonFixtures(db: => DB)(implicit ec: ExecutionContext) extends Fixtures[JsObject] {
@@ -37,7 +35,7 @@ class JsonFixtures(db: => DB)(implicit ec: ExecutionContext) extends Fixtures[Js
       remove(query = Json.obj(), firstMatchOnly = false)
 
   def drop(collectionName: String): Future[Unit] =
-    db.collection[JSONCollection](collectionName).drop()
+    db.collection[JSONCollection](collectionName).drop(failIfNotFound = true).map(_ => {})
 
 }
 
