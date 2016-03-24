@@ -80,7 +80,11 @@ lazy val settings = (
 lazy val root = project.in(file("."))
   .aggregate(bson, json, core, samples)
   .settings(settings: _*)
-  .settings(publishSettings: _*)
+  .settings(
+    publishLocal := {},
+    publish := {},
+    publishM2 := {}
+  )
   .settings(publishArtifact := false)
   .settings(unidocSettings: _*)
 
@@ -100,6 +104,10 @@ lazy val json = project.in(file("json"))
 
 lazy val samples = project.in(file("samples"))
   .settings(settings: _*)
-  .settings(publishSettings: _*)
+  .settings(
+    publishLocal := {},
+    publish := {},
+    publishM2 := {}
+  )
   .settings(publishArtifact := false)
   .dependsOn(core % "test->test;compile->compile", bson % "compile->compile")
