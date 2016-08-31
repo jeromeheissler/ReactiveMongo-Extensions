@@ -1,13 +1,16 @@
+**This project is no longer maintained by the ReactiveMongo community (see below why) and these extensions are updated by myself. You can get my version of these extensions from jitpack see [Using ReactiveMongo Extensions](#using-reactivemongo-extensions-in-your-project).**
+
 # ReactiveMongo Extensions
 
 The goal of *ReactiveMongo Extensions* is to provide all the necessary tools for ReactiveMongo other than the core functionality.
 
+> **Since ReactiveMongo 0.11, the useful functions are available directly in the [driver](https://github.com/ReactiveMongo/ReactiveMongo), so these extensions are not updated, and it's recommended to directly use the driver.**
+
 Here is a complete example using Play 2.2, ReactiveMongo Extensions and Flight.js https://github.com/mertkavi/play-reactivemongo-extensions-sample
 
-[![Build Status](https://travis-ci.org/ReactiveMongo/ReactiveMongo-Extensions.svg?branch=0.10.x)](https://travis-ci.org/ReactiveMongo/ReactiveMongo-Extensions)
-![Progress](http://progressed.io/bar/70?title=stable)
+[![](https://jitpack.io/v/jeromeheissler/ReactiveMongo-Extensions.svg)](https://jitpack.io/#jeromeheissler/ReactiveMongo-Extensions)
 
-[![Maven Central](https://maven-badges.herokuapp.com/maven-central/org.reactivemongo/reactivemongo-extensions-core_2.11/badge.svg)](https://maven-badges.herokuapp.com/maven-central/org.reactivemongo/reactivemongo-extensions-core_2.11/)
+
 
 ## Introduction
 
@@ -50,7 +53,7 @@ import scala.concurrent.ExecutionContext.Implicits.global
 object MongoContext {
   val driver = new MongoDriver
   val connection = driver.connection(List("localhost"))
-  def db: DB = connection("reactivemongo-extensions")
+  def db: Future[DB] = connection.database("reactivemongo-extensions")
 }
 
 object PersonDao extends BsonDao[Person, BSONObjectID](MongoContext.db, "persons")
@@ -271,36 +274,23 @@ import reactivemongo.extensions.Implicits._
 
 ## Using ReactiveMongo Extensions in your project
 
-The general format is that release a.b.c.d is compatible with ReactiveMongo a.b.c.
-Current version matrix is below:
-
-| reactivemongo-extensions-bson    | Target ReactiveMongo version |
-|----------------------------------|------------------------------|
-| 0.10.0.0-SNAPSHOT                | 0.10.0                       |
-
-| reactivemongo-extensions-json    | Target Play-ReactiveMongo version |
-|----------------------------------|-----------------------------------|
-| 0.10.0.0-SNAPSHOT                | 0.10.2                            |
-
-Note: Only available for scala 2.10.
-
 If you use SBT, you just have to edit build.sbt and add the following:
 
 ```scala
-resolvers += "Sonatype Snapshots" at "https://oss.sonatype.org/content/repositories/snapshots/"
+resolvers += "jitpack" at "https://jitpack.io"
 
 libraryDependencies ++= Seq(
-  "org.reactivemongo" %% "reactivemongo-extensions-bson" % "0.10.0.0-SNAPSHOT"
+  "com.github.jeromeheissler.ReactiveMongo-Extensions" %% "reactivemongo-extensions-bson" % "0.11.14"
 )
 ```
 
 or
 
 ```scala
-resolvers += "Sonatype Snapshots" at "https://oss.sonatype.org/content/repositories/snapshots/"
+resolvers += "jitpack" at "https://jitpack.io"
 
 libraryDependencies ++= Seq(
-  "org.reactivemongo" %% "reactivemongo-extensions-json" % "0.10.0.0-SNAPSHOT"
+  "com.github.jeromeheissler.ReactiveMongo-Extensions" %% "reactivemongo-extensions-json" % "0.11.14"
 )
 ```
 
