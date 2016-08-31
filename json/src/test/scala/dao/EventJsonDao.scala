@@ -22,7 +22,7 @@ import reactivemongo.extensions.json.model.Event
 import reactivemongo.extensions.json.dsl.JsonDsl
 import reactivemongo.api.DB
 
-class EventJsonDao(_db: DB)
+class EventJsonDao(_db: Future[DB])
     extends JsonDao[Event, String](_db, "events")
     with JsonDsl {
 

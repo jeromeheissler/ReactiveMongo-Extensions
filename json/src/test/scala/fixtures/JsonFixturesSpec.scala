@@ -35,7 +35,7 @@ class JsonFixturesSpec extends FlatSpec with Matchers with ScalaFutures with Bef
   val eventDao = new EventJsonDao(db)
 
   after {
-    db.drop()
+    db.map(_.drop())
   }
 
   "A JsonFixtures" should "load persons" in {

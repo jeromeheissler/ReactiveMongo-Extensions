@@ -36,7 +36,7 @@ import reactivemongo.api.commands.{ GetLastError, WriteResult }
  * @tparam ID Type of the ID field of the model.
  * @tparam Writer the `Structure` writer
  */
-abstract class Dao[C <: Collection: CollectionProducer, Structure, Model, ID, Writer[_]](db: => DB, collectionName: String) {
+abstract class Dao[C <: Collection: CollectionProducer, Structure, Model, ID, Writer[_]](db: => Future[DB], collectionName: String) {
 
   /**
    * The list of indexes to be ensured on DAO load.
@@ -86,7 +86,7 @@ abstract class Dao[C <: Collection: CollectionProducer, Structure, Model, ID, Wr
   def bulkInsert(models: TraversableOnce[Model], bulkSize: Int, bulkByteSize: Int)(implicit ec: ExecutionContext): Future[Int]
 
   /** Reference to the collection this DAO operates on. */
-  def collection: C = db.collection[C](collectionName)
+  def collection(implicit ec: ExecutionContext): Future[C] = db.map(_.collection[C](collectionName))
 
   /**
    * Returns the number of documents in this collection matching the given selector.

@@ -23,23 +23,26 @@ import reactivemongo.api.commands.WriteResult
 import reactivemongo.play.json._, collection.JSONCollection
 import play.api.libs.json.{ Json, JsObject }
 
-class JsonFixtures(db: => DB)(implicit ec: ExecutionContext) extends Fixtures[JsObject] {
+class JsonFixtures(db: => Future[DB])(implicit ec: ExecutionContext) extends Fixtures[JsObject] {
 
   def map(document: JsObject): JsObject = document
 
-  def bulkInsert(collectionName: String, documents: Stream[JsObject]): Future[Int] = db.collection[JSONCollection](
-    collectionName).bulkInsert(documents, ordered = true).map(_.n)
+  def bulkInsert(collectionName: String, documents: Stream[JsObject]): Future[Int] = db.flatMap(_.collection[JSONCollection](
+    collectionName).bulkInsert(documents, ordered = true)).map(_.n)
 
   def removeAll(collectionName: String): Future[WriteResult] =
-    db.collection[JSONCollection](collectionName).
-      remove(query = Json.obj(), firstMatchOnly = false)
+    db.flatMap(_.collection[JSONCollection](collectionName).
+      remove(query = Json.obj(), firstMatchOnly = false))
 
   def drop(collectionName: String): Future[Unit] =
-    db.collection[JSONCollection](collectionName).drop(failIfNotFound = true).map(_ => {})
+    db.flatMap(_.collection[JSONCollection](collectionName).drop(failIfNotFound = true)).map(_ => {})
 
 }
 
 object JsonFixtures {
-  def apply(db: DB)(implicit ec: ExecutionContext): JsonFixtures = new JsonFixtures(db)
+
+  @deprecated("Use [[apply(db: Future[DB])]]", "0.11.14")
+  def apply(db: DB)(implicit ec: ExecutionContext): JsonFixtures = new JsonFixtures(Future.successful(db))
+  def apply(db: Future[DB])(implicit ec: ExecutionContext): JsonFixtures = new JsonFixtures(db)
 }
 

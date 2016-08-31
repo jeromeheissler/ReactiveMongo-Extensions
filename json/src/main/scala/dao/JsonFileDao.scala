@@ -29,7 +29,7 @@ import scala.concurrent.{ ExecutionContext, Future }
  * import reactivemongo.extensions.dao.JsonFileDao, JsonFileDao._
  * }}}
  */
-abstract class JsonFileDao[Id <: JsValue: IdProducer](db: => DB with DBMetaCommands, collectionName: String)(implicit gridFsId: Id => BSONValue)
+abstract class JsonFileDao[Id <: JsValue: IdProducer](db: => Future[DB with DBMetaCommands], collectionName: String)(implicit gridFsId: Id => BSONValue)
     extends FileDao[Id, JsObject](db, collectionName) {
 
   import reactivemongo.play.json.JsObjectWriter

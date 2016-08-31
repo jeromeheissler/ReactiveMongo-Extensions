@@ -18,11 +18,11 @@ package reactivemongo.extensions.dao
 
 import java.io.OutputStream
 
-import scala.concurrent.{ Future, ExecutionContext }
+import scala.concurrent.{ Await, Future, ExecutionContext }
 
 import play.api.libs.iteratee.Enumerator
 
-import reactivemongo.api.{ BSONSerializationPack, DBMetaCommands, Cursor, DB }
+import reactivemongo.api._
 import reactivemongo.api.gridfs.{
   DefaultFileToSave,
   ReadFile,
@@ -43,12 +43,12 @@ import reactivemongo.extensions.dao.FileDao.ReadFileWrapper
  * @param collectionName Name of the collection this DAO is going to operate on.
  */
 abstract class FileDao[Id <% BSONValue: IdProducer, Structure](
-    db: => DB with DBMetaCommands, collectionName: String) {
+    db: => Future[DB with DBMetaCommands], collectionName: String) {
 
   import FileDao.BSONReadFile
 
   /** Reference to the GridFS instance this FileDao operates on. */
-  lazy val gfs = GridFS(db, collectionName)
+  def gfs(implicit ec: ExecutionContext) = db.map(d => GridFS[BSONSerializationPack.type](d, collectionName))
 
   /**
    * Finds the files matching the given selector.
@@ -56,45 +56,49 @@ abstract class FileDao[Id <% BSONValue: IdProducer, Structure](
    * @param selector Selector document
    * @return A cursor for the files matching the given selector.
    */
-  def find(selector: Structure)(implicit sWriter: BSONDocumentWriter[Structure], ec: ExecutionContext): Cursor[BSONReadFile] = gfs.find[Structure, BSONReadFile](selector)
+  def find(selector: Structure)(implicit sWriter: BSONDocumentWriter[Structure], ec: ExecutionContext): Cursor[BSONReadFile] = {
+    CursorFlattener.defaultCursorFlattener.flatten(gfs.map(_.find[Structure, BSONReadFile](selector)))
+  }
 
   /** Retrieves the file with the given `id`. */
   def findById(id: Id)(implicit ec: ExecutionContext): ReadFileWrapper
 
   /* Retrieves at most one file matching the given selector. */
-  def findOne(selector: Structure)(implicit sWriter: BSONDocumentWriter[Structure], ec: ExecutionContext): ReadFileWrapper =
-    ReadFileWrapper(gfs, gfs.find(selector).headOption)
+  def findOne(selector: Structure)(implicit sWriter: BSONDocumentWriter[Structure], ec: ExecutionContext): ReadFileWrapper = ReadFileWrapper(gfs, gfs.flatMap(_.find(selector).headOption))
 
   /** Removes the file with the given `id`. */
   def removeById(id: Id)(implicit ec: ExecutionContext): Future[WriteResult] =
-    gfs.remove(implicitly[BSONValue](id))
+    gfs.flatMap(_.remove(implicitly[BSONValue](id)))
 
   /** Saves the content provided by the given enumerator with the given metadata. */
   def save(
     enumerator: Enumerator[Array[Byte]],
     file: FileToSave[BSONSerializationPack.type, BSONValue],
     chunkSize: Int = 262144)(implicit readFileReader: BSONDocumentReader[BSONReadFile], ec: ExecutionContext): Future[BSONReadFile] =
-    gfs.save(enumerator, file, chunkSize)
+    gfs.flatMap(_.save(enumerator, file, chunkSize))
 
   /** Saves the content provided by the given enumerator with the given metadata. */
   def save(
     enumerator: Enumerator[Array[Byte]],
     filename: String,
     contentType: String)(implicit readFileReader: BSONDocumentReader[BSONReadFile], ec: ExecutionContext): Future[BSONReadFile] =
-    gfs.save(enumerator, DefaultFileToSave(
-      filename = Some(filename), contentType = Some(contentType)))
+    gfs.flatMap(_.save(enumerator, DefaultFileToSave(
+      filename = Some(filename), contentType = Some(contentType))))
 
 }
 
 object FileDao {
   type BSONReadFile = ReadFile[BSONSerializationPack.type, BSONValue]
 
-  case class ReadFileWrapper(gfs: GridFS[BSONSerializationPack.type], readFile: Future[Option[BSONReadFile]]) {
+  case class ReadFileWrapper(gridfs: Future[GridFS[BSONSerializationPack.type]], readFile: Future[Option[BSONReadFile]]) {
 
-    def enumerate(implicit ec: ExecutionContext): Future[Option[Enumerator[Array[Byte]]]] = readFile.map(_.map(gfs.enumerate(_)))
+    @deprecated("Use [[gridfs]]", "0.11.14")
+    def gfs = Await.result(gridfs, scala.concurrent.duration.Duration.Inf)
+
+    def enumerate(implicit ec: ExecutionContext): Future[Option[Enumerator[Array[Byte]]]] = gridfs.flatMap(gfs => readFile.map(_.map(gfs.enumerate(_))))
 
     def read(out: OutputStream)(implicit ec: ExecutionContext): Future[Option[Unit]] = readFile.flatMap {
-      case Some(readFile) => gfs.readToOutputStream(readFile, out).map(Some(_))
+      case Some(readFile) => gridfs.flatMap(_.readToOutputStream(readFile, out)).map(Some(_))
       case None => Future.successful(None)
     }
   }

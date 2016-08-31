@@ -25,9 +25,9 @@ import reactivemongo.bson.{
   BSONWriter
 }
 
-import scala.concurrent.ExecutionContext
+import scala.concurrent.{Future, ExecutionContext}
 
-class BsonDaoBuilder[Model, ID](db: => DB) {
+class BsonDaoBuilder[Model, ID](db: => Future[DB]) {
   def apply(collectionName: String)(
     implicit modelReader: BSONDocumentReader[Model],
     modelWriter: BSONDocumentWriter[Model],
@@ -40,7 +40,7 @@ class BsonDaoBuilder[Model, ID](db: => DB) {
 }
 
 object BsonDaoBuilder {
-  def apply[Model, ID](db: => DB): BsonDaoBuilder[Model, ID] = {
+  def apply[Model, ID](db: => Future[DB]): BsonDaoBuilder[Model, ID] = {
     new BsonDaoBuilder[Model, ID](db)
   }
 }

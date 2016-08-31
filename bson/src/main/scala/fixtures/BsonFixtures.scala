@@ -26,24 +26,25 @@ import reactivemongo.api.commands.WriteResult
 import reactivemongo.api.collections.bson.BSONCollection
 import reactivemongo.play.json.BSONFormats
 
-class BsonFixtures(db: => DB)(implicit ec: ExecutionContext) extends Fixtures[BSONDocument] {
+class BsonFixtures(db: => Future[DB])(implicit ec: ExecutionContext) extends Fixtures[BSONDocument] {
   def map(document: JsObject): BSONDocument =
     BSONFormats.BSONDocumentFormat.reads(document).get
 
-  def bulkInsert(collectionName: String, documents: Stream[BSONDocument]): Future[Int] = db.collection[BSONCollection](
-    collectionName).bulkInsert(documents, ordered = true).map(_.n)
+  def bulkInsert(collectionName: String, documents: Stream[BSONDocument]): Future[Int] = db.flatMap(_.collection[BSONCollection](
+    collectionName).bulkInsert(documents, ordered = true)).map(_.n)
 
   def removeAll(collectionName: String): Future[WriteResult] =
-    db.collection[BSONCollection](collectionName).
-      remove(query = BSONDocument.empty, firstMatchOnly = false)
+    db.flatMap(_.collection[BSONCollection](collectionName).
+      remove(query = BSONDocument.empty, firstMatchOnly = false))
 
   def drop(collectionName: String): Future[Unit] =
-    db.collection[BSONCollection](collectionName).drop(failIfNotFound = true).map(_ => {})
+    db.flatMap(_.collection[BSONCollection](collectionName).drop(failIfNotFound = true)).map(_ => {})
 
 }
 
 object BsonFixtures {
-  def apply(db: DB)(implicit ec: ExecutionContext): BsonFixtures =
-    new BsonFixtures(db)
+  @deprecated("Use [[apply(db: Future[DB])]]", "0.11.14")
+  def apply(db: DB)(implicit ec: ExecutionContext): BsonFixtures = new BsonFixtures(Future.successful(db))
+  def apply(db: Future[DB])(implicit ec: ExecutionContext): BsonFixtures = new BsonFixtures(db)
 }
 

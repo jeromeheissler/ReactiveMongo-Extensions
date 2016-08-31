@@ -22,7 +22,7 @@ import reactivemongo.api.DB
 import scala.concurrent.Future
 import reactivemongo.extensions.json.dsl.JsonDsl
 
-class PersonJsonDao(_db: DB)
+class PersonJsonDao(_db: Future[DB])
     extends JsonDao[Person, String](_db, "persons")
     with JsonDsl {
 

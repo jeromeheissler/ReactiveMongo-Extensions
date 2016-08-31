@@ -16,13 +16,13 @@
 
 package reactivemongo.extensions.dao
 
-import reactivemongo.bson.{ BSONWriter, BSONDocument, BSONValue, Producer }
+import reactivemongo.bson.{ BSONDocument, BSONValue }
 import reactivemongo.api.{ DBMetaCommands, DB }
 import reactivemongo.api.gridfs.IdProducer
 import reactivemongo.extensions.dao.FileDao.ReadFileWrapper
-import scala.concurrent.ExecutionContext
+import scala.concurrent.{Future, ExecutionContext}
 
-abstract class BsonFileDao[Id <: BSONValue: IdProducer](db: => DB with DBMetaCommands, collectionName: String) extends FileDao[Id, BSONDocument](db, collectionName) {
+abstract class BsonFileDao[Id <: BSONValue: IdProducer](db: => Future[DB with DBMetaCommands], collectionName: String) extends FileDao[Id, BSONDocument](db, collectionName) {
 
   def findById(id: Id)(implicit ec: ExecutionContext): ReadFileWrapper = {
     findOne(BSONDocument("_id" -> id))

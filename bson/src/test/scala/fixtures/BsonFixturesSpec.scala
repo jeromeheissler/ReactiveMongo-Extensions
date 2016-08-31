@@ -38,7 +38,7 @@ class BsonFixturesSpec extends FlatSpec with Matchers with ScalaFutures with Bef
   val eventDao = new EventBsonDao(db)
 
   after {
-    db.drop()
+    db.map(_.drop())
   }
 
   "A BsonFixtures" should "load persons" in {
