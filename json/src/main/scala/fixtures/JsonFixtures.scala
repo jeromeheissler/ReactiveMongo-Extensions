@@ -32,7 +32,7 @@ class JsonFixtures(db: => Future[DB])(implicit ec: ExecutionContext) extends Fix
 
   def removeAll(collectionName: String): Future[WriteResult] =
     db.flatMap(_.collection[JSONCollection](collectionName).
-      remove(query = Json.obj(), firstMatchOnly = false))
+      remove(selector = Json.obj(), firstMatchOnly = false))
 
   def drop(collectionName: String): Future[Unit] =
     db.flatMap(_.collection[JSONCollection](collectionName).drop(failIfNotFound = true)).map(_ => {})

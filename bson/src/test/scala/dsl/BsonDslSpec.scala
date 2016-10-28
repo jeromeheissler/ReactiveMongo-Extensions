@@ -240,7 +240,9 @@ object BsonDslSpec extends FlatSpec with Matchers {
   }
 
   it should "create $elemMatch" in {
-    val dsl: BSONDocument = "array" $elemMatch ("value1" $eq 1, "value2" $gt 1)
+    val eq: BSONDocument = "value1" $eq 1
+    val gt: BSONDocument = "value2" $gt 1
+    val dsl: BSONDocument = "array" $elemMatch (eq, gt)
     val expected = BSONDocument(
       "array" -> BSONDocument(
         "$elemMatch" -> BSONDocument(
@@ -399,7 +401,8 @@ object BsonDslSpec extends FlatSpec with Matchers {
   }
 
   it should "create $pull with query" in {
-    val dsl = $pull("votes" $gte 6)
+    val doc: BSONDocument = "votes" $gte 6
+    val dsl = $pull(doc)
     val expected = BSONDocument("$pull" -> BSONDocument("votes" -> BSONDocument("$gte" -> 6)))
     dsl shouldBe expected
   }

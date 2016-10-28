@@ -222,7 +222,7 @@ abstract class JsonDao[Model: OFormat, ID: Writes](db: => Future[DB], collection
   }
 
   def removeAll(writeConcern: GetLastError = defaultWriteConcern)(implicit ec: ExecutionContext): Future[WriteResult] = {
-    collection.flatMap(_.remove(query = Json.obj(), writeConcern = writeConcern, firstMatchOnly = false))
+    collection.flatMap(_.remove(selector = Json.obj(), writeConcern = writeConcern, firstMatchOnly = false))
   }
 
   def foreach(

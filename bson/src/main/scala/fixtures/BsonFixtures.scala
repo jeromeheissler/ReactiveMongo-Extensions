@@ -35,7 +35,7 @@ class BsonFixtures(db: => Future[DB])(implicit ec: ExecutionContext) extends Fix
 
   def removeAll(collectionName: String): Future[WriteResult] =
     db.flatMap(_.collection[BSONCollection](collectionName).
-      remove(query = BSONDocument.empty, firstMatchOnly = false))
+      remove(selector = BSONDocument.empty, firstMatchOnly = false))
 
   def drop(collectionName: String): Future[Unit] =
     db.flatMap(_.collection[BSONCollection](collectionName).drop(failIfNotFound = true)).map(_ => {})

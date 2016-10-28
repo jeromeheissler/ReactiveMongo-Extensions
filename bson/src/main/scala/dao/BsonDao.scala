@@ -208,7 +208,7 @@ abstract class BsonDao[Model, ID](db: => Future[DB], collectionName: String)(imp
     firstMatchOnly: Boolean = false)(implicit ec: ExecutionContext): Future[WriteResult] = collection.flatMap(_.remove(query, writeConcern, firstMatchOnly))
 
   def removeAll(writeConcern: GetLastError = defaultWriteConcern)(implicit ec: ExecutionContext): Future[WriteResult] = {
-    collection.flatMap(_.remove(query = BSONDocument.empty, writeConcern = writeConcern, firstMatchOnly = false))
+    collection.flatMap(_.remove(selector = BSONDocument.empty, writeConcern = writeConcern, firstMatchOnly = false))
   }
 
   def foreach(
