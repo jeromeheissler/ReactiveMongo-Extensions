@@ -102,8 +102,17 @@ object BsonDslSpec extends FlatSpec with Matchers {
   }
 
   it should "create $lt" in {
-    val dsl: BSONDocument = "age" $lt 18
+    val dsl = "age" $lt 18
     val expected = BSONDocument("age" -> BSONDocument("$lt" -> 18))
+    dsl shouldBe expected
+  }
+
+  it should "create $lt" in {
+    val dsl = BSONDocument(
+      "age" $lt 18,
+      "test" -> "test"
+    )
+    val expected = BSONDocument("age" -> BSONDocument("$lt" -> 18), "test" -> "test")
     dsl shouldBe expected
   }
 

@@ -185,7 +185,7 @@ object Expression {
         BSONDocument(element);
     }
 
-  implicit def toBSONElement(expr: Expression): BSONElement =
-    expr.element;
+  /*implicit def toBSONElement(expr: Expression): BSONElement =
+    expr.element;*/
 }
 

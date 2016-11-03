@@ -305,9 +305,9 @@ trait BsonDsl {
     with LogicalOperators
     with ArrayOperators
 
-  implicit def toBSONElement[V <: BSONValue](expression: Expression[V])(implicit writer: BSONWriter[V, _ <: BSONValue]): Producer[BSONElement] = {
+  /*implicit def toBSONElement[V <: BSONValue](expression: Expression[V])(implicit writer: BSONWriter[V, _ <: BSONValue]): Producer[BSONElement] = {
     expression.field -> expression.value
-  }
+  }*/
 
   implicit def toBSONDocument[V <: BSONValue](expression: Expression[V])(implicit writer: BSONWriter[V, _ <: BSONValue]): BSONDocument =
     BSONDocument(expression.field -> expression.value)
